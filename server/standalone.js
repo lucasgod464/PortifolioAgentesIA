@@ -1,7 +1,11 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const { Pool } = require('pg');
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { Pool } from 'pg';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize app
 const app = express();
@@ -103,4 +107,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔗 Database: ${process.env.DATABASE_URL ? 'Conectado' : 'Mock data'}`);
 });
 
-module.exports = app;
+export default app;
