@@ -1,15 +1,27 @@
 {
   "version": 2,
-  "buildCommand": "npm run build && cp -r dist/public/* . && cp dist/public/index.html index.html",
-  "functions": {
-    "api/server.js": {
-      "runtime": "@vercel/node@18.x"
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/server"
+      "src": "dist/public/**/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/server.js"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/public/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/public/index.html"
     }
   ]
 }

@@ -1,0 +1,984 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// server/logger.ts
+function log(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+var init_logger = __esm({
+  "server/logger.ts"() {
+    "use strict";
+  }
+});
+
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import themePlugin from "@replit/vite-plugin-shadcn-theme-json";
+import path from "path";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+var vite_config_default;
+var init_vite_config = __esm({
+  async "vite.config.ts"() {
+    "use strict";
+    vite_config_default = defineConfig({
+      plugins: [
+        react(),
+        runtimeErrorOverlay(),
+        themePlugin(),
+        ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
+          await import("@replit/vite-plugin-cartographer").then(
+            (m) => m.cartographer()
+          )
+        ] : []
+      ],
+      resolve: {
+        alias: {
+          "@": path.resolve(import.meta.dirname, "client", "src"),
+          "@shared": path.resolve(import.meta.dirname, "shared"),
+          "@assets": path.resolve(import.meta.dirname, "attached_assets")
+        }
+      },
+      root: path.resolve(import.meta.dirname, "client"),
+      build: {
+        outDir: path.resolve(import.meta.dirname, "dist/public"),
+        emptyOutDir: true
+      }
+    });
+  }
+});
+
+// server/vite.ts
+var vite_exports = {};
+__export(vite_exports, {
+  log: () => log2,
+  serveStatic: () => serveStatic,
+  setupVite: () => setupVite
+});
+import express from "express";
+import fs from "fs";
+import path2 from "path";
+import { createServer as createViteServer, createLogger } from "vite";
+import { nanoid } from "nanoid";
+function log2(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite(app2, server) {
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...vite_config_default,
+    configFile: false,
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      }
+    },
+    server: serverOptions,
+    appType: "custom"
+  });
+  app2.use(vite.middlewares);
+  app2.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path2.resolve(
+        import.meta.dirname,
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+function serveStatic(app2) {
+  const distPath = path2.resolve(import.meta.dirname, "public");
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path2.resolve(distPath, "index.html"));
+  });
+}
+var viteLogger;
+var init_vite = __esm({
+  async "server/vite.ts"() {
+    "use strict";
+    await init_vite_config();
+    viteLogger = createLogger();
+  }
+});
+
+// server/production.ts
+var production_exports = {};
+__export(production_exports, {
+  setupProductionServer: () => setupProductionServer
+});
+import express2 from "express";
+import fs2 from "fs";
+import path3 from "path";
+function setupProductionServer(app2) {
+  const distPath = path3.resolve(process.cwd(), "dist", "public");
+  if (!fs2.existsSync(distPath)) {
+    log(`\u274C Build directory not found: ${distPath}`);
+    app2.use("*", (_req, res) => {
+      if (_req.path.startsWith("/api")) {
+        return;
+      }
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>NexusAI - Plataforma de Agentes IA</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body>
+            <h1>\u{1F916} NexusAI - API Funcionando</h1>
+            <p>Build do frontend n\xE3o encontrado. Execute o build primeiro.</p>
+            <p>API dispon\xEDvel em <code>/api/*</code></p>
+          </body>
+        </html>
+      `);
+    });
+  } else {
+    log(`\u2705 Serving static files from ${distPath}`);
+    app2.use(express2.static(distPath));
+    app2.use("*", (_req, res) => {
+      res.sendFile(path3.resolve(distPath, "index.html"));
+    });
+  }
+}
+var init_production = __esm({
+  "server/production.ts"() {
+    "use strict";
+    init_logger();
+  }
+});
+
+// server/index.ts
+import express3 from "express";
+
+// server/routes.ts
+import { createServer } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+
+// shared/schema.ts
+var schema_exports = {};
+__export(schema_exports, {
+  agentPrompts: () => agentPrompts,
+  agentPromptsRelations: () => agentPromptsRelations,
+  agents: () => agents,
+  agentsRelations: () => agentsRelations,
+  insertAgentPromptSchema: () => insertAgentPromptSchema,
+  insertAgentSchema: () => insertAgentSchema,
+  insertUserSchema: () => insertUserSchema,
+  users: () => users
+});
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
+var users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  isAdmin: boolean("isAdmin").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var agents = pgTable("agents", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var agentPrompts = pgTable("agent_prompts", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").notNull().references(() => agents.id),
+  prompt: text("prompt").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull()
+});
+var agentsRelations = relations(agents, ({ many }) => ({
+  prompts: many(agentPrompts)
+}));
+var agentPromptsRelations = relations(agentPrompts, ({ one }) => ({
+  agent: one(agents, {
+    fields: [agentPrompts.agentId],
+    references: [agents.id]
+  })
+}));
+var insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+  isAdmin: true
+});
+var insertAgentSchema = createInsertSchema(agents);
+var insertAgentPromptSchema = createInsertSchema(agentPrompts).pick({
+  agentId: true,
+  prompt: true,
+  isActive: true
+});
+
+// server/db.ts
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+import dotenv from "dotenv";
+dotenv.config();
+console.log("\u{1F527} Conectando ao banco de dados PostgreSQL local no Replit...");
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL n\xE3o encontrada. Certifique-se de que o banco de dados PostgreSQL est\xE1 provisionado."
+  );
+}
+console.log(
+  "\u2705 DATABASE_URL encontrada:",
+  "***" + process.env.DATABASE_URL.substring(process.env.DATABASE_URL.indexOf("@"))
+);
+var pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 3e4,
+  connectionTimeoutMillis: 5e3
+});
+pool.on("error", (err) => {
+  console.error("\u274C Erro inesperado no pool de conex\xF5es:", err.message);
+});
+console.log("\u2705 Pool de conex\xF5es configurado com sucesso!");
+var db = drizzle(pool, { schema: schema_exports });
+
+// server/storage.ts
+import { eq, and, desc } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import dotenv2 from "dotenv";
+dotenv2.config();
+var PostgresSessionStore = connectPg(session);
+var DatabaseStorage = class {
+  sessionStore;
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
+      tableName: process.env.DB_SESSION_TABLE || "session"
+      // Nome da tabela de sessão, pode ser configurado no .env
+    });
+  }
+  // User methods
+  async getUser(id) {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+  async getUserByUsername(username) {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+  async createUser(insertUser) {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+  // Agent methods
+  async getAgents() {
+    return await db.select().from(agents);
+  }
+  async getAgent(id) {
+    const [agent] = await db.select().from(agents).where(eq(agents.id, id));
+    return agent;
+  }
+  async createAgent(agent) {
+    const [newAgent] = await db.insert(agents).values(agent).returning();
+    return newAgent;
+  }
+  async updateAgent(id, agent) {
+    const [updatedAgent] = await db.update(agents).set(agent).where(eq(agents.id, id)).returning();
+    return updatedAgent;
+  }
+  async deleteAgent(id) {
+    const result = await db.delete(agents).where(eq(agents.id, id));
+    return true;
+  }
+  // AgentPrompt methods
+  async getAgentPrompts(agentId) {
+    return await db.select().from(agentPrompts).where(eq(agentPrompts.agentId, agentId)).orderBy(desc(agentPrompts.createdAt));
+  }
+  async getActiveAgentPrompt(agentId) {
+    const [prompt] = await db.select().from(agentPrompts).where(
+      and(
+        eq(agentPrompts.agentId, agentId),
+        eq(agentPrompts.isActive, true)
+      )
+    ).orderBy(desc(agentPrompts.updatedAt)).limit(1);
+    return prompt;
+  }
+  async createAgentPrompt(prompt) {
+    if (prompt.isActive) {
+      await db.update(agentPrompts).set({ isActive: false }).where(eq(agentPrompts.agentId, prompt.agentId));
+    }
+    const [newPrompt] = await db.insert(agentPrompts).values(prompt).returning();
+    return newPrompt;
+  }
+  async updateAgentPrompt(id, prompt) {
+    if (prompt.isActive) {
+      const [currentPrompt] = await db.select().from(agentPrompts).where(eq(agentPrompts.id, id));
+      if (currentPrompt) {
+        await db.update(agentPrompts).set({ isActive: false }).where(eq(agentPrompts.agentId, currentPrompt.agentId));
+      }
+    }
+    const [updatedPrompt] = await db.update(agentPrompts).set(prompt).where(eq(agentPrompts.id, id)).returning();
+    return updatedPrompt;
+  }
+  async deleteAgentPrompt(id) {
+    await db.delete(agentPrompts).where(eq(agentPrompts.id, id));
+    return true;
+  }
+};
+var storage = new DatabaseStorage();
+
+// server/auth.ts
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import session2 from "express-session";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import dotenv3 from "dotenv";
+dotenv3.config();
+var scryptAsync = promisify(scrypt);
+async function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = await scryptAsync(password, salt, 64);
+  return `${buf.toString("hex")}.${salt}`;
+}
+async function comparePasswords(supplied, stored) {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = await scryptAsync(supplied, salt, 64);
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+function isAdmin(req, res, next) {
+  if (req.isAuthenticated() && req.user?.isAdmin) {
+    return next();
+  }
+  return res.status(403).json({ error: "Acesso n\xE3o autorizado" });
+}
+function isAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  return res.status(401).json({ error: "N\xE3o autenticado" });
+}
+function setupAuth(app2) {
+  if (!process.env.SESSION_SECRET) {
+    const randomSecret = randomBytes(32).toString("hex");
+    console.warn(`\u26A0\uFE0F Aviso: SESSION_SECRET n\xE3o definido. Usando um segredo gerado aleatoriamente para esta sess\xE3o: ${randomSecret}`);
+    process.env.SESSION_SECRET = randomSecret;
+  }
+  const sessionMaxAge = parseInt(process.env.SESSION_MAX_AGE || "86400000", 10);
+  const sessionSettings = {
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    cookie: {
+      maxAge: sessionMaxAge,
+      secure: process.env.NODE_ENV === "production"
+    }
+  };
+  app2.set("trust proxy", 1);
+  app2.use(session2(sessionSettings));
+  app2.use(passport.initialize());
+  app2.use(passport.session());
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        if (!user || !await comparePasswords(password, user.password)) {
+          return done(null, false, { message: "Credenciais inv\xE1lidas" });
+        }
+        return done(null, user);
+      } catch (error) {
+        return done(error);
+      }
+    })
+  );
+  passport.serializeUser((user, done) => done(null, user.id));
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+  app2.post("/api/register", async (req, res, next) => {
+    try {
+      const validationResult = insertUserSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Dados inv\xE1lidos", details: validationResult.error });
+      }
+      const { username, password, isAdmin: isAdmin2 } = validationResult.data;
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Nome de usu\xE1rio j\xE1 existe" });
+      }
+      const user = await storage.createUser({
+        username,
+        password: await hashPassword(password),
+        isAdmin: isAdmin2 || false
+      });
+      const { password: _, ...userWithoutPassword } = user;
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) {
+        return res.status(401).json({ error: "Credenciais inv\xE1lidas" });
+      }
+      req.login(user, (err2) => {
+        if (err2) return next(err2);
+        const { password: _, ...userWithoutPassword } = user;
+        return res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
+  });
+  app2.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "N\xE3o autenticado" });
+    }
+    const { password: _, ...userWithoutPassword } = req.user;
+    res.json(userWithoutPassword);
+  });
+  app2.post("/api/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.sendStatus(200);
+    });
+  });
+  return { isAdmin, isAuthenticated };
+}
+
+// server/api.ts
+function setupApiRoutes(app2) {
+  app2.get("/api/agents", async (req, res, next) => {
+    try {
+      const agents2 = await storage.getAgents();
+      res.json(agents2);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.get("/api/agents/:id", async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      res.json(agent);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.post("/api/agents", isAdmin, async (req, res, next) => {
+    try {
+      const validationResult = insertAgentSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Dados inv\xE1lidos", details: validationResult.error });
+      }
+      const newAgent = await storage.createAgent(validationResult.data);
+      res.status(201).json(newAgent);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.put("/api/agents/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      const validationResult = insertAgentSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Dados inv\xE1lidos", details: validationResult.error });
+      }
+      const updatedAgent = await storage.updateAgent(id, validationResult.data);
+      if (!updatedAgent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      res.json(updatedAgent);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.delete("/api/agents/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      const agent = await storage.getAgent(id);
+      if (!agent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      await storage.deleteAgent(id);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.get("/api/agents/:agentId/prompts", async (req, res, next) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      if (isNaN(agentId)) {
+        return res.status(400).json({ error: "ID de agente inv\xE1lido" });
+      }
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      const prompts = await storage.getAgentPrompts(agentId);
+      res.json(prompts);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.get("/api/agents/:agentId/active-prompt", async (req, res, next) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      if (isNaN(agentId)) {
+        return res.status(400).json({ error: "ID de agente inv\xE1lido" });
+      }
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      const prompt = await storage.getActiveAgentPrompt(agentId);
+      if (!prompt) {
+        return res.status(404).json({ error: "Nenhum prompt ativo encontrado para este agente" });
+      }
+      res.json(prompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.post("/api/agents/:agentId/prompts", isAdmin, async (req, res, next) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      if (isNaN(agentId)) {
+        return res.status(400).json({ error: "ID de agente inv\xE1lido" });
+      }
+      const agent = await storage.getAgent(agentId);
+      if (!agent) {
+        return res.status(404).json({ error: "Agente n\xE3o encontrado" });
+      }
+      const data = { ...req.body, agentId };
+      const validationResult = insertAgentPromptSchema.safeParse(data);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Dados inv\xE1lidos", details: validationResult.error });
+      }
+      const newPrompt = await storage.createAgentPrompt(validationResult.data);
+      res.status(201).json(newPrompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.put("/api/agent-prompts/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      const validationResult = insertAgentPromptSchema.partial().safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ error: "Dados inv\xE1lidos", details: validationResult.error });
+      }
+      const updatedPrompt = await storage.updateAgentPrompt(id, validationResult.data);
+      if (!updatedPrompt) {
+        return res.status(404).json({ error: "Prompt n\xE3o encontrado" });
+      }
+      res.json(updatedPrompt);
+    } catch (error) {
+      next(error);
+    }
+  });
+  app2.delete("/api/agent-prompts/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      await storage.deleteAgentPrompt(id);
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+}
+
+// server/routes.ts
+async function registerRoutes(app2) {
+  const { isAdmin: isAdmin2, isAuthenticated: isAuthenticated3 } = setupAuth(app2);
+  setupApiRoutes(app2);
+  try {
+    const adminUser = await storage.getUserByUsername("admin");
+    if (!adminUser) {
+      console.log("Criando usu\xE1rio admin padr\xE3o...");
+      await storage.createUser({
+        username: "admin",
+        password: await hashPassword("admin"),
+        isAdmin: true
+      });
+      console.log("Usu\xE1rio admin criado com sucesso.");
+    }
+  } catch (error) {
+    console.error("Erro ao inicializar dados:", error);
+  }
+  const httpServer = createServer(app2);
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+  wss.on("connection", (ws) => {
+    console.log("Nova conex\xE3o WebSocket estabelecida");
+    ws.on("message", (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log("Mensagem recebida:", data);
+        if (data.type === "chat_message") {
+          setTimeout(() => {
+            const agentResponse = {
+              type: "agent_response",
+              agentName: data.agentName || "Assistente",
+              text: `Resposta para: ${data.text}`,
+              time: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            };
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(agentResponse));
+            }
+          }, 1e3);
+        }
+      } catch (error) {
+        console.error("Erro ao processar mensagem WebSocket:", error);
+      }
+    });
+    ws.on("close", () => {
+      console.log("Conex\xE3o WebSocket fechada");
+    });
+    const welcomeMessage = {
+      type: "system_message",
+      text: "Conex\xE3o WebSocket estabelecida. Bem-vindo ao chat!",
+      time: (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    };
+    ws.send(JSON.stringify(welcomeMessage));
+  });
+  return httpServer;
+}
+
+// server/index.ts
+init_logger();
+import dotenv4 from "dotenv";
+
+// server/initializeDatabase.ts
+var databaseInitialized = false;
+async function checkTableExists(tableName) {
+  const maxRetries = 3;
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      const result = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = $1
+        );
+      `, [tableName]);
+      return result.rows[0].exists;
+    } catch (error) {
+      retries++;
+      console.error(`Erro ao verificar se a tabela ${tableName} existe (tentativa ${retries}/${maxRetries}):`, error);
+      if (retries >= maxRetries) {
+        console.error(`N\xFAmero m\xE1ximo de tentativas atingido ao verificar tabela '${tableName}'.`);
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1e3));
+    }
+  }
+  return false;
+}
+async function createTablesIfNotExist() {
+  try {
+    const usersTableExists = await checkTableExists("users");
+    if (!usersTableExists) {
+      console.log("\u{1F527} Criando tabelas do banco de dados...");
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username TEXT NOT NULL UNIQUE,
+          password TEXT NOT NULL,
+          "isAdmin" BOOLEAN NOT NULL DEFAULT false,
+          "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS agents (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          icon TEXT NOT NULL,
+          "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS agent_prompts (
+          id SERIAL PRIMARY KEY,
+          "agentId" INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+          prompt TEXT NOT NULL,
+          "isActive" BOOLEAN NOT NULL DEFAULT false,
+          "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log("\u2705 Tabelas criadas com sucesso!");
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("\u274C Erro ao criar tabelas:", error);
+    throw error;
+  }
+}
+async function seedInitialData() {
+  try {
+    const existingUsers = await db.select().from(users);
+    if (existingUsers.length === 0) {
+      console.log("\u{1F331} Populando banco de dados com dados iniciais...");
+      const adminPassword = await hashPassword("admin");
+      await db.insert(users).values({
+        username: "admin",
+        password: adminPassword,
+        isAdmin: true
+      });
+      const agentsList = [
+        { title: "Comercial", description: "Assistente virtual para equipes comerciais e vendas", icon: "fas fa-briefcase" },
+        { title: "Cl\xEDnicas", description: "Assistente especializado para cl\xEDnicas e consult\xF3rios m\xE9dicos", icon: "fas fa-clinic-medical" },
+        { title: "Imobili\xE1rias", description: "Assistente para corretores e profissionais do setor imobili\xE1rio", icon: "fas fa-home" },
+        { title: "Jur\xEDdico", description: "Assistente virtual para escrit\xF3rios de advocacia e profissionais da \xE1rea jur\xEDdica", icon: "fas fa-balance-scale" },
+        { title: "Financeiro", description: "Assistente especializado em finan\xE7as, contabilidade e planejamento financeiro", icon: "fas fa-chart-line" },
+        { title: "Educa\xE7\xE3o", description: "Assistente virtual para institui\xE7\xF5es de ensino e professores", icon: "fas fa-graduation-cap" },
+        { title: "Restaurantes", description: "Assistente para estabelecimentos gastron\xF4micos e delivery", icon: "fas fa-utensils" },
+        { title: "Eventos", description: "Assistente especializado em organiza\xE7\xE3o e promo\xE7\xE3o de eventos", icon: "fas fa-calendar-alt" },
+        { title: "Recursos Humanos", description: "Assistente para recrutamento, sele\xE7\xE3o e gest\xE3o de pessoas", icon: "fas fa-users" },
+        { title: "Sa\xFAde", description: "Assistente virtual para profissionais da \xE1rea da sa\xFAde", icon: "fas fa-heartbeat" },
+        { title: "Varejo", description: "Assistente especializado em lojas f\xEDsicas e e-commerce", icon: "fas fa-shopping-cart" },
+        { title: "Tecnologia", description: "Assistente para empresas e profissionais de tecnologia", icon: "fas fa-laptop-code" }
+      ];
+      for (const agent of agentsList) {
+        await db.insert(agents).values(agent);
+      }
+      console.log("\u2705 Dados iniciais criados com sucesso!");
+    } else {
+      console.log("\u2139\uFE0F Dados iniciais j\xE1 existem no banco de dados.");
+    }
+  } catch (error) {
+    console.error("\u274C Erro ao criar dados iniciais:", error);
+    throw error;
+  }
+}
+async function connectWithRetry(maxRetries = 10, retryDelay = 3e3) {
+  let retries = 0;
+  console.log("\u{1F50D} Tentando conectar ao banco de dados com estas configura\xE7\xF5es:");
+  console.log(`- DATABASE_URL: ${process.env.DATABASE_URL ? "***" + process.env.DATABASE_URL.substring(process.env.DATABASE_URL.indexOf("@")) : "n\xE3o definido"}`);
+  console.log(`- DB_HOST: ${process.env.DB_HOST || "n\xE3o definido"}`);
+  console.log(`- DB_PORT: ${process.env.DB_PORT || "n\xE3o definido"}`);
+  console.log(`- DB_USER: ${process.env.DB_USER || "n\xE3o definido"}`);
+  console.log(`- DB_NAME: ${process.env.DB_NAME || "n\xE3o definido"}`);
+  while (retries < maxRetries) {
+    try {
+      await pool.query("SELECT NOW()");
+      console.log("\u2705 Conex\xE3o com o banco de dados estabelecida!");
+      return true;
+    } catch (error) {
+      retries++;
+      console.error(`\u274C Tentativa ${retries}/${maxRetries} falhou ao conectar ao banco:`, error?.message || "Erro desconhecido");
+      if (error?.message?.includes("no pg_hba.conf entry")) {
+        console.error("\u26A0\uFE0F Erro de autentica\xE7\xE3o: Verifique as credenciais e permiss\xF5es do banco de dados.");
+      } else if (error?.message?.includes("connect ECONNREFUSED")) {
+        console.error("\u26A0\uFE0F Conex\xE3o recusada: O servidor de banco de dados pode n\xE3o estar acess\xEDvel neste host/porta.");
+      } else if (error?.message?.includes("database") && error?.message?.includes("does not exist")) {
+        console.error("\u26A0\uFE0F O banco de dados especificado n\xE3o existe. Verifique o nome do banco e crie-o se necess\xE1rio.");
+      }
+      if (retries >= maxRetries) {
+        console.error("\u274C N\xFAmero m\xE1ximo de tentativas atingido. N\xE3o foi poss\xEDvel conectar ao banco de dados.");
+        return false;
+      }
+      const waitTime = retryDelay * Math.pow(1.5, retries - 1);
+      console.log(`\u23F3 Aguardando ${waitTime / 1e3} segundos antes da pr\xF3xima tentativa...`);
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+    }
+  }
+  return false;
+}
+async function initializeDatabase() {
+  if (databaseInitialized) {
+    console.log("\u{1F504} Banco de dados j\xE1 foi inicializado anteriormente.");
+    return;
+  }
+  try {
+    console.log("\u{1F50D} Verificando banco de dados...");
+    const connected = await connectWithRetry();
+    if (!connected) {
+      console.error("\u274C N\xE3o foi poss\xEDvel conectar ao banco de dados ap\xF3s v\xE1rias tentativas.");
+      return;
+    }
+    const tablesCreated = await createTablesIfNotExist();
+    await seedInitialData();
+    console.log("\u2705 Banco de dados inicializado com sucesso!");
+    databaseInitialized = true;
+  } catch (error) {
+    console.error("\u274C Falha ao inicializar banco de dados:", error);
+    console.error("Detalhes do erro:", error instanceof Error ? error.message : String(error));
+    console.error("Verifique se as vari\xE1veis de ambiente DATABASE_URL, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD e DB_NAME est\xE3o configuradas corretamente.");
+  }
+}
+
+// server/index.ts
+dotenv4.config();
+var app = express3();
+app.use(express3.json());
+app.use(express3.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path4 = req.path;
+  let capturedJsonResponse = void 0;
+  const originalResJson = res.json;
+  res.json = function(bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path4.startsWith("/api")) {
+      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "\u2026";
+      }
+      log(logLine);
+    }
+  });
+  next();
+});
+(async () => {
+  try {
+    await initializeDatabase();
+    console.log("Banco de dados verificado e inicializado com sucesso!");
+  } catch (error) {
+    console.error("Erro ao inicializar o banco de dados:", error);
+    process.exit(1);
+  }
+  const server = await registerRoutes(app);
+  app.use((err, _req, res, _next) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
+  try {
+    if (process.env.NODE_ENV === "development") {
+      const { setupVite: setupVite2 } = await init_vite().then(() => vite_exports);
+      await setupVite2(app, server);
+    } else {
+      const { setupProductionServer: setupProductionServer2 } = await Promise.resolve().then(() => (init_production(), production_exports));
+      setupProductionServer2(app);
+      log("\u2705 Servidor de produ\xE7\xE3o configurado.");
+    }
+  } catch (error) {
+    log(`\u274C ERRO AO SERVIR ARQUIVOS EST\xC1TICOS: ${error}`);
+    app.use("*", (req, res, next) => {
+      if (req.path.startsWith("/api")) {
+        next();
+      } else {
+        res.set("Content-Type", "text/html");
+        res.send(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>IA Makers Club - API</title>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                h1 { color: #5f3dc4; }
+                .message { background: #f0f0f0; padding: 20px; border-radius: 5px; }
+                .error { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 20px; }
+              </style>
+            </head>
+            <body>
+              <h1>IA Makers Club - API</h1>
+              <div class="message">
+                <p>A API est\xE1 funcionando corretamente, mas n\xE3o foi poss\xEDvel carregar a interface.</p>
+                <p>Por favor, execute <code>npm run build</code> para criar os arquivos da interface ou contate o suporte.</p>
+              </div>
+              <div class="error">
+                <strong>Erro:</strong> ${error instanceof Error ? error.message : String(error)}
+              </div>
+            </body>
+          </html>
+        `);
+      }
+    });
+  }
+  const port = 5e3;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true
+  }, () => {
+    log(`\u2728 Servidor iniciado na porta ${port}`);
+    log(`\u{1F517} Database URL: ${process.env.DATABASE_URL?.split("@")[1] || "Configurada via vari\xE1veis de ambiente"}`);
+  });
+})();

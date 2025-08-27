@@ -1,0 +1,13 @@
+node_modules
+.env
+*.log
+.replit
+replit.nix
+.config
+server
+client/src
+client/public
+shared
+*.ts
+*.tsx
+!api/*.js

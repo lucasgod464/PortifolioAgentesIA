@@ -1,61 +1,54 @@
-const express = require('express');
-const { Pool } = require('pg');
-
-const app = express();
-app.use(express.json());
-
-// Database setup - only if DATABASE_URL is provided
-let db;
-if (process.env.DATABASE_URL) {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  });
-  db = pool;
-}
-
-// Mock data for when database is not available
+// Mock data for demo
 const mockAgents = [
   {
     id: 1,
-    name: "Assistente Vendas",
-    description: "Especialista em vendas e conversão",
-    webhook_url: null,
-    whatsapp_number: null
+    title: "Assistente Vendas",
+    description: "Especialista em vendas e conversão de leads em clientes. Ajuda a identificar oportunidades e fechar negócios com estratégias personalizadas.",
+    icon: "📈"
   },
   {
     id: 2,
-    name: "Suporte Técnico",
-    description: "Ajuda com problemas técnicos",
-    webhook_url: null,
-    whatsapp_number: null
+    title: "Suporte Técnico",
+    description: "Resolutivo e eficiente em questões técnicas. Oferece soluções rápidas para problemas de software e hardware.",
+    icon: "🔧"
+  },
+  {
+    id: 3,
+    title: "Marketing Digital",
+    description: "Especialista em campanhas digitais e estratégias de crescimento online. Otimiza presença digital e engajamento.",
+    icon: "🎯"
   }
 ];
 
-// Routes
-app.get('/api/user', (req, res) => {
-  res.status(401).json({ error: 'Não autenticado' });
-});
+export default function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-app.get('/api/agents', async (req, res) => {
-  try {
-    if (db) {
-      const result = await db.query('SELECT * FROM agents ORDER BY id');
-      res.json(result.rows);
-    } else {
-      // Return mock data if no database
-      res.json(mockAgents);
-    }
-  } catch (error) {
-    console.error('Database error:', error);
-    // Fallback to mock data
-    res.json(mockAgents);
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
-});
 
-app.post('/api/auth/login', (req, res) => {
-  res.status(401).json({ error: 'Credenciais inválidas' });
-});
+  const { url, method } = req;
 
-// Handle all API routes
-module.exports = app;
+  // Route: GET /api/user
+  if (url === '/api/user' && method === 'GET') {
+    return res.status(401).json({ error: 'Não autenticado' });
+  }
+
+  // Route: GET /api/agents
+  if (url === '/api/agents' && method === 'GET') {
+    return res.status(200).json(mockAgents);
+  }
+
+  // Route: POST /api/auth/login
+  if (url === '/api/auth/login' && method === 'POST') {
+    return res.status(401).json({ error: 'Credenciais inválidas' });
+  }
+
+  // Default 404
+  res.status(404).json({ error: 'API endpoint not found' });
+}
