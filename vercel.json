@@ -1,24 +1,17 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "server/standalone.ts",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/api/[...path]"
     },
     {
-      "src": "client/**/*",
-      "use": "@vercel/static-build"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/server/standalone.ts"
+      "source": "/((?!api).*)",
+      "destination": "/dist/public/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/dist/public/$1"
+      "source": "/",
+      "destination": "/dist/public/index.html"
     }
-  ],
-  "outputDirectory": "dist/public"
+  ]
 }
