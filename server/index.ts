@@ -70,17 +70,10 @@ app.use((req, res, next) => {
       const { setupVite } = await import("./vite");
       await setupVite(app, server);
     } else {
-      // Tenta primeiro usar a função resiliente
-      try {
-        serveStaticResiliente(app);
-        log('✅ Arquivos estáticos servidos com função resiliente.');
-      } catch (error) {
-        // Se falhar, tenta a função original como fallback
-        log(`⚠️ Erro ao usar função resiliente: ${error}`);
-        log('⚠️ Tentando função original como fallback...');
-        const { serveStaticProduction } = await import("./static");
-        serveStaticProduction(app);
-      }
+      // Produção - usa função simples sem Vite
+      const { setupProductionServer } = await import("./production");
+      setupProductionServer(app);
+      log('✅ Servidor de produção configurado.');
     }
   } catch (error) {
     log(`❌ ERRO AO SERVIR ARQUIVOS ESTÁTICOS: ${error}`);
