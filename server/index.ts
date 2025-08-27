@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log } from "./logger";
 import { serveStaticResiliente } from "./staticWrapper";
 import dotenv from "dotenv";
 import { initializeDatabase } from "./initializeDatabase";
@@ -66,7 +66,8 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   try {
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV === "development") {
+      const { setupVite } = await import("./vite");
       await setupVite(app, server);
     } else {
       // Tenta primeiro usar a função resiliente
@@ -77,7 +78,8 @@ app.use((req, res, next) => {
         // Se falhar, tenta a função original como fallback
         log(`⚠️ Erro ao usar função resiliente: ${error}`);
         log('⚠️ Tentando função original como fallback...');
-        serveStatic(app);
+        const { serveStaticProduction } = await import("./static");
+        serveStaticProduction(app);
       }
     }
   } catch (error) {
