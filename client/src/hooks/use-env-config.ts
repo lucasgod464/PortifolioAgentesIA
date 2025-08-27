@@ -38,6 +38,53 @@ export const useLogoFromEnv = () => {
   return logoUrl;
 };
 
+// Hook para obter título da aplicação
+export const useAppTitle = () => {
+  const [title, setTitle] = useState<string>('');
+  
+  useEffect(() => {
+    const envTitle = import.meta.env.VITE_APP_TITLE;
+    const defaultTitle = 'NexusAI - Agentes de Inteligência Artificial';
+    
+    const finalTitle = envTitle || defaultTitle;
+    setTitle(finalTitle);
+    
+    // Atualiza o título da página
+    document.title = finalTitle;
+  }, []);
+  
+  return title;
+};
+
+// Hook para configurar cores do sistema via CSS
+export const useThemeColors = () => {
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    // Cores configuráveis via .env
+    const primaryColor = import.meta.env.VITE_PRIMARY_COLOR || '222 47% 11%';
+    const secondaryColor = import.meta.env.VITE_SECONDARY_COLOR || '60 4.8% 95.9%';
+    const accentColor = import.meta.env.VITE_ACCENT_COLOR || '24 9.8% 10%';
+    const backgroundColor = import.meta.env.VITE_BACKGROUND_COLOR || '0 0% 100%';
+    const foregroundColor = import.meta.env.VITE_FOREGROUND_COLOR || '20 14.3% 4.1%';
+    
+    // Aplica as cores personalizadas
+    root.style.setProperty('--primary', primaryColor);
+    root.style.setProperty('--secondary', secondaryColor);
+    root.style.setProperty('--accent', accentColor);
+    root.style.setProperty('--background', backgroundColor);
+    root.style.setProperty('--foreground', foregroundColor);
+    
+    console.log('Cores personalizadas aplicadas:', {
+      primary: primaryColor,
+      secondary: secondaryColor,
+      accent: accentColor,
+      background: backgroundColor,
+      foreground: foregroundColor
+    });
+  }, []);
+};
+
 // Hook para obter a URL do webhook da variável de ambiente
 export const useWebhookUrl = () => {
   const [webhookUrl, setWebhookUrl] = useState<string>('');

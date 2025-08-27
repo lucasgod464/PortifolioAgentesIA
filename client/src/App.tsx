@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import GlobalChatModal from "./components/GlobalChatModal";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./hooks/use-auth";
+import { useAppTitle, useThemeColors } from "./hooks/use-env-config";
 
 // Admin pages
 import AdminIndexPage from "./pages/admin/index";
@@ -45,6 +46,10 @@ function Router() {
 }
 
 function App() {
+  // Aplicar configurações globais do .env
+  useAppTitle();
+  useThemeColors();
+  
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
