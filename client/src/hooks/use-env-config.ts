@@ -44,7 +44,7 @@ export const useAppTitle = () => {
   
   useEffect(() => {
     const envTitle = import.meta.env.VITE_APP_TITLE;
-    const defaultTitle = 'NexusAI - Agentes de Inteligência Artificial';
+    const defaultTitle = 'ArsenalAI - Agentes de Inteligência Artificial';
     
     const finalTitle = envTitle || defaultTitle;
     setTitle(finalTitle);
