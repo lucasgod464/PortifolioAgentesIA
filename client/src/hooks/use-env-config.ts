@@ -28,7 +28,7 @@ export const useLogoFromEnv = () => {
   
   useEffect(() => {
     const envLogo = import.meta.env.VITE_LOGO_URL;
-    const defaultLogo = 'https://cdn.xpiria.com.br/xpiria/logo_xpiria.svg';
+    const defaultLogo = 'https://sistemas-droppy.zbkdqg.easypanel.host/$/FD9Y4';
     
     const logoSrc = envLogo || defaultLogo;
     console.log('VITE_LOGO_URL ou URL padrão:', logoSrc);
